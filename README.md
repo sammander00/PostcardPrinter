@@ -1,7 +1,6 @@
 ## 👹 HELL Postcard Printer
 
 A standalone tool for HELL Pizza stores to batch-print voucher codes onto HELL postcards.
-## # 👹 HELL Postcard Printer
 
 A standalone tool for HELL Pizza stores to batch-print voucher codes onto pre-printed HELL postcards.
 ## 🍕 How to install
