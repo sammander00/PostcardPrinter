@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hell Postcard Printer</title>
+    <link rel="icon" type="image/png" href="logo.png">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #FE0000;
+            --bg: #0b0b0b;
+            --card-bg: #1a1a1a;
+            --text: #E1D8B7;
+            --text-muted: #a19a82;
+            --panel-width: 380px;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        aside {
+            width: var(--panel-width);
+            background: var(--card-bg);
+            border-right: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin: 0 0 1rem 0;
+            color: var(--primary);
+            letter-spacing: -1px;
+        }
+
+        .section-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 1.5rem 0 0.75rem 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .control-group {
+            background: #222;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-muted);
+        }
+
+        select,
+        input[type="text"],
+        input[type="number"],
+        input[type="range"] {
+            width: 100%;
+            background: #111;
+            border: 1px solid #444;
+            color: var(--text);
+            padding: 0.6rem;
+            border-radius: 4px;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        .btn {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            font-size: 0.85rem;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background: #444;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            width: 100%;
+            margin-top: 1rem;
+            font-size: 1rem;
+            height: 50px;
+        }
+
+        .btn-primary:hover {
+            background: #d40000;
+        }
+
+        .btn-add {
+            background: #2e7d32;
+            padding: 0.4rem 0.8rem;
+            font-size: 0.7rem;
+        }
+
+        .btn-save {
+            background: #1565c0;
+            font-size: 0.7rem;
+            padding: 0.4rem 0.8rem;
+        }
+
+        .btn-load {
+            background: #444;
+            font-size: 0.7rem;
+            padding: 0.4rem 0.8rem;
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+            position: relative;
+            padding: 2rem;
+            overflow: auto;
+        }
+
+        .top-toolbar {
+            position: fixed;
+            top: 1.5rem;
+            right: 2rem;
+            display: flex;
+            gap: 1rem;
+            z-index: 200;
+        }
+
+        .file-label,
+        .btn-secondary {
+            background: rgba(254, 0, 0, 0.9);
+            color: white;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            border: 2px solid transparent;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-secondary {
+            background: #444;
+            border: none;
+            font-family: inherit;
+        }
+
+        .file-label:hover {
+            background: #d40000;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary:hover {
+            background: #555;
+            transform: translateY(-2px);
+        }
+
+        .a6-container {
+            position: relative;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.7);
+            background: #fff;
+            width: 620px;
+            height: 440px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #bg-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .layer {
+            position: absolute;
+            cursor: move;
+            user-select: none;
+            padding: 4px;
+            border: 1px dashed transparent;
+            white-space: nowrap;
+            color: #FE0000;
+            font-weight: bold;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .layer:hover {
+            border-color: rgba(0, 0, 0, 0.2);
+        }
+
+        .layer.active {
+            border-color: var(--primary);
+            background: rgba(254, 0, 0, 0.05);
+            z-index: 10;
+        }
+
+        .layer-item {
+            background: #2a2a2a;
+            margin-bottom: 0.5rem;
+            padding: 0.5rem;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-left: 3px solid transparent;
+            cursor: pointer;
+        }
+
+        .layer-item.active {
+            border-left-color: var(--primary);
+            background: #333;
+        }
+
+        .layer-item .name {
+            flex: 1;
+            font-size: 0.85rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .layer-item .type {
+            font-size: 0.6rem;
+            background: #444;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+
+        .layer-item .delete {
+            color: #ff4444;
+            cursor: pointer;
+            font-size: 1.2rem;
+            line-height: 1;
+        }
+
+        .hint {
+            position: absolute;
+            bottom: 2rem;
+            color: #666;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        .print-toggle {
+            background: #2e2e2e;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--primary);
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <aside>
+        <h1>HELL POSTCARD PRINTER</h1>
+
+        <div class="section-title">
+            Data Source (Excel)
+            <label class="btn btn-add"
+                style="background: #2e7d32; margin-top: 0; cursor: pointer; display: inline-flex; align-items: center;">
+                <span id="import-btn-text">📂 Import</span>
+                <input type="file" id="data-input" hidden accept=".xlsx, .xls, .csv">
+            </label>
+        </div>
+        <div class="control-group">
+            <select id="column-select">
+                <option>1. Import Excel File First</option>
+            </select>
+            <div id="stats" style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.5rem;">0 codes loaded
+            </div>
+        </div>
+
+        <div class="section-title">
+            Layers
+            <span>
+                <button class="btn btn-save" onclick="saveTemplate()" title="Save as Named Template">Save As...</button>
+                <button class="btn btn-add" id="add-text-btn">+ Field</button>
+            </span>
+        </div>
+        <div class="control-group" style="padding: 0.6rem; margin-bottom: 1rem; display: flex; gap: 8px;">
+            <select id="template-select" onchange="loadSelectedTemplate()"
+                style="flex: 1; font-size: 0.8rem; padding: 0.4rem;">
+                <option value="default">-- Master Template --</option>
+            </select>
+            <button class="btn" onclick="deleteTemplate()" style="background: #444; padding: 0.4rem 0.6rem;"
+                title="Delete Template">×</button>
+        </div>
+        <div id="layers-list"></div>
+
+        <div id="layer-settings-panel" style="display: none;">
+            <div class="section-title">Edit Text Layer</div>
+            <div class="control-group">
+                <label>Text / Placeholder</label>
+                <input type="text" id="edit-text-content">
+
+                <label style="margin-top: 0.8rem;">Font Size (<span id="font-size-val">18</span>)</label>
+                <input type="range" id="edit-font-size" min="6" max="100" value="18">
+
+                <label style="margin-top: 0.8rem;">Alignment</label>
+                <select id="edit-alignment">
+                    <option value="left">Left</option>
+                    <option value="center">Center</option>
+                    <option value="right">Right</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="flex: 1;"></div>
+
+
+        <button id="generate-btn" class="btn btn-primary">Generate & Print Vouchers</button>
+    </aside>
+
+    <main>
+        <div class="a6-container" id="canvas">
+            <img id="bg-image" src="template.png"
+                onerror="this.style.display='none'; console.error('Failed to load template.png');"
+                onload="this.style.display='block';">
+            <!-- Layers will be injected here -->
+        </div>
+
+        <div class="hint">
+            Oriented for LANDSCAPE A6.<br>
+            Fields are aligned to match the HELL template image.
+        </div>
+    </main>
+
+    <script>
+        const { jsPDF } = window.jspdf;
+
+        const MASTER_LAYERS = [
+            { "id": "offer", "type": "static", "text": "FREE PIZZA", "x": 312, "y": 88, "fontSize": 16, "align": "left" },
+            { "id": "code", "type": "dynamic", "text": "WEB-CODE-123", "x": 314, "y": 157, "fontSize": 16, "align": "left" },
+            { "id": "expiry", "type": "static", "text": "31/12/2026", "x": 316, "y": 229, "fontSize": 16, "align": "left" },
+            { "id": "valid", "type": "static", "text": "HELL BOND ST", "x": 315, "y": 298, "fontSize": 16, "align": "left" },
+            { "id": "auth", "type": "static", "text": "MANAGER", "x": 320, "y": 369, "fontSize": 16, "align": "left" },
+            { "id": "1771901323443", "type": "static", "text": "Extra Field", "x": 92, "y": 315, "fontSize": 16, "align": "left" },
+            { "id": "1771901331142", "type": "static", "text": "Extra Field", "x": 93, "y": 372, "fontSize": 16, "align": "left" }
+        ];
+
+        let state = {
+            codes: [],
+            layers: JSON.parse(JSON.stringify(MASTER_LAYERS)),
+            activeIndex: 1,
+            canvasWidth: 620,
+            canvasHeight: 440
+        };
+
+        const templateSelect = document.getElementById('template-select');
+
+        function updateTemplateDropdown() {
+            const saved = JSON.parse(localStorage.getItem('hell_printer_v2_templates') || '{}');
+            templateSelect.innerHTML = '<option value="default">-- Master Template --</option>';
+            Object.keys(saved).forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                templateSelect.appendChild(opt);
+            });
+        }
+
+        // Force reload background image on startup to avoid caching issues
+        window.addEventListener('load', () => {
+            const bg = document.getElementById('bg-image');
+            bg.src = 'template.png?t=' + new Date().getTime();
+            updateTemplateDropdown();
+        });
+
+        const canvas = document.getElementById('canvas');
+        const layersList = document.getElementById('layers-list');
+        const columnSelect = document.getElementById('column-select');
+        const bgImage = document.getElementById('bg-image');
+        const dataInput = document.getElementById('data-input');
+        const addTextBtn = document.getElementById('add-text-btn');
+        const settingsPanel = document.getElementById('layer-settings-panel');
+        const editContent = document.getElementById('edit-text-content');
+        const editFontSize = document.getElementById('edit-font-size');
+        const editAlign = document.getElementById('edit-alignment');
+        const generateBtn = document.getElementById('generate-btn');
+
+        dataInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (re) => {
+                    const data = new Uint8Array(re.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const json = XLSX.utils.sheet_to_json(sheet);
+
+                    if (json.length > 0) {
+                        const cols = Object.keys(json[0]);
+                        columnSelect.innerHTML = '';
+                        cols.forEach(c => {
+                            const opt = document.createElement('option');
+                            opt.value = c; opt.textContent = c;
+                            columnSelect.appendChild(opt);
+                        });
+
+                        const updateCodes = () => {
+                            const col = columnSelect.value;
+                            state.codes = json.map(r => r[col]).filter(v => v !== undefined);
+                            document.getElementById('stats').textContent = `${state.codes.length} codes found`;
+                            const codeLayer = state.layers.find(l => l.id === 'code');
+                            if (state.codes.length > 0) codeLayer.text = state.codes[0];
+                            render();
+                        };
+                        columnSelect.onchange = updateCodes;
+                        updateCodes();
+                        document.getElementById('import-btn-text').textContent = '✅ Loaded';
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        };
+
+        addTextBtn.onclick = () => {
+            state.layers.push({
+                id: Date.now().toString(),
+                type: 'static',
+                text: 'Extra Field',
+                x: 300, y: 200, fontSize: 16, align: 'left'
+            });
+            state.activeIndex = state.layers.length - 1;
+            render();
+        };
+
+        function deleteLayer(index, e) {
+            e.stopPropagation();
+            if (state.layers[index].id === 'code') return;
+            state.layers.splice(index, 1);
+            state.activeIndex = 0;
+            render();
+        }
+
+        let isDragging = false;
+        let dragOffset = { x: 0, y: 0 };
+
+        function initDrag(e, index) {
+            isDragging = true;
+            state.activeIndex = index;
+            const layer = state.layers[index];
+            const rect = canvas.getBoundingClientRect();
+            dragOffset.x = (e.clientX - rect.left) - layer.x;
+            dragOffset.y = (e.clientY - rect.top) - layer.y;
+            render();
+            e.preventDefault();
+        }
+
+        window.onmousemove = (e) => {
+            if (!isDragging) return;
+            const layer = state.layers[state.activeIndex];
+            const rect = canvas.getBoundingClientRect();
+            layer.x = (e.clientX - rect.left) - dragOffset.x;
+            layer.y = (e.clientY - rect.top) - dragOffset.y;
+            layer.x = Math.max(0, Math.min(layer.x, state.canvasWidth));
+            layer.y = Math.max(0, Math.min(layer.y, state.canvasHeight));
+            updateLayerNode(state.activeIndex);
+        };
+
+        window.onmouseup = () => { isDragging = false; };
+
+        editContent.oninput = () => {
+            state.layers[state.activeIndex].text = editContent.value;
+            updateLayerNode(state.activeIndex);
+        };
+
+        editFontSize.oninput = () => {
+            state.layers[state.activeIndex].fontSize = parseInt(editFontSize.value);
+            document.getElementById('font-size-val').textContent = editFontSize.value;
+            updateLayerNode(state.activeIndex);
+        };
+
+        editAlign.onchange = () => {
+            state.layers[state.activeIndex].align = editAlign.value;
+            updateLayerNode(state.activeIndex);
+        };
+
+        function updateLayerNode(index) {
+            const layer = state.layers[index];
+            const node = document.getElementById(`layer-${layer.id}`);
+            if (!node) return;
+            node.textContent = layer.text;
+            node.style.left = layer.x + 'px';
+            node.style.top = layer.y + 'px';
+            node.style.fontSize = layer.fontSize + 'px';
+            node.style.textAlign = layer.align;
+            const trans = layer.align === 'center' ? 'translate(-50%, -50%)' : (layer.align === 'right' ? 'translate(-100%, -50%)' : 'translate(0, -50%)');
+            node.style.transform = trans;
+            const listItem = document.querySelector(`.layer-item[data-index="${index}"] .name`);
+            if (listItem) listItem.textContent = layer.id === 'code' ? 'WEB CODE' : (layer.id === 'offer' ? 'OFFER' : (layer.id === 'expiry' ? 'EXPIRY' : (layer.id === 'valid' ? 'VALID AT' : (layer.id === 'auth' ? 'AUTH BY' : layer.text))));
+        }
+
+        function render() {
+            canvas.querySelectorAll('.layer').forEach(n => n.remove());
+            state.layers.forEach((layer, i) => {
+                const div = document.createElement('div');
+                div.id = `layer-${layer.id}`;
+                div.className = `layer ${state.activeIndex === i ? 'active' : ''}`;
+                div.textContent = layer.text;
+                div.onmousedown = (e) => initDrag(e, i);
+                canvas.appendChild(div);
+                updateLayerNode(i);
+            });
+
+            layersList.innerHTML = '';
+            state.layers.forEach((layer, i) => {
+                const item = document.createElement('div');
+                item.className = `layer-item ${state.activeIndex === i ? 'active' : ''}`;
+                item.dataset.index = i;
+                item.onclick = () => { state.activeIndex = i; render(); };
+                let lbl = layer.id === 'code' ? 'Unique Code (Data)' : (layer.type === 'static' ? layer.text : 'Extra Field');
+                item.innerHTML = `
+                    <span class="type">${layer.type === 'dynamic' ? 'Data' : 'Txt'}</span>
+                    <span class="name">${lbl}</span>
+                    ${layer.id !== 'code' && layer.type !== 'dynamic' ? `<span class="delete" onclick="deleteLayer(${i}, event)">×</span>` : ''}
+                `;
+                layersList.appendChild(item);
+            });
+
+            settingsPanel.style.display = 'block';
+            const active = state.layers[state.activeIndex];
+            editContent.value = active.text;
+            editContent.disabled = (active.type === 'dynamic' && state.codes.length > 0);
+            editFontSize.value = active.fontSize;
+            document.getElementById('font-size-val').textContent = active.fontSize;
+            editAlign.value = active.align || 'center';
+        }
+
+        function saveTemplate() {
+            const name = prompt("Enter a name for this layout (e.g., 'Wellington Indoor Sport'):");
+            if (!name) return;
+            const saved = JSON.parse(localStorage.getItem('hell_printer_v2_templates') || '{}');
+            saved[name] = state.layers;
+            localStorage.setItem('hell_printer_v2_templates', JSON.stringify(saved));
+            updateTemplateDropdown();
+            templateSelect.value = name;
+            alert(`✅ Template "${name}" saved!`);
+        }
+
+        function loadSelectedTemplate() {
+            const name = templateSelect.value;
+            if (name === 'default') {
+                state.layers = JSON.parse(JSON.stringify(MASTER_LAYERS));
+            } else {
+                const saved = JSON.parse(localStorage.getItem('hell_printer_v2_templates') || '{}');
+                if (saved[name]) {
+                    state.layers = saved[name];
+                }
+            }
+            state.activeIndex = 0;
+            render();
+        }
+
+        function deleteTemplate() {
+            const name = templateSelect.value;
+            if (name === 'default') return;
+            if (confirm(`Are you sure you want to delete "${name}"?`)) {
+                const saved = JSON.parse(localStorage.getItem('hell_printer_v2_templates') || '{}');
+                delete saved[name];
+                localStorage.setItem('hell_printer_v2_templates', JSON.stringify(saved));
+                updateTemplateDropdown();
+                loadSelectedTemplate();
+            }
+        }
+
+        generateBtn.onclick = async () => {
+            if (state.codes.length === 0) { alert("Please import your Excel codes first!"); return; }
+            const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [148, 105] });
+            generateBtn.textContent = 'Generating...';
+            generateBtn.disabled = true;
+            const printBg = false; // Always assume pre-printed cards
+
+            for (let i = 0; i < state.codes.length; i++) {
+                if (i > 0) pdf.addPage([148, 105], 'landscape');
+                if (printBg) {
+                    try { pdf.addImage(bgImage.src, 'PNG', 0, 0, 148, 105); } catch (e) { }
+                }
+                state.layers.forEach(layer => {
+                    pdf.setFont('courier', 'bold');
+                    pdf.setTextColor(254, 0, 0);
+                    pdf.setFontSize(layer.fontSize * 0.75);
+                    // Use fixed scaling: 4 pixels = 1mm
+                    const mmX = layer.x / 4;
+                    const mmY = layer.y / 4;
+                    const content = layer.type === 'dynamic' ? String(state.codes[i]) : layer.text;
+                    pdf.text(content, mmX, mmY, { align: layer.align, baseline: 'middle' });
+                });
+            }
+
+            // 1. Save the PDF backup first
+            pdf.save(`HELL_VOUCHERS_${Date.now()}.pdf`);
+
+            // 2. Attempt to open Print Dialog
+            try {
+                const pdfBlob = pdf.output('blob');
+                const pdfUrl = URL.createObjectURL(pdfBlob);
+
+                const iframe = document.createElement('iframe');
+                // Hidden but in DOM
+                iframe.style.position = 'fixed';
+                iframe.style.top = '-1000px';
+                iframe.src = pdfUrl;
+                document.body.appendChild(iframe);
+
+                // We use a small timeout to ensure the PDF is loaded into the iframe
+                setTimeout(() => {
+                    try {
+                        iframe.contentWindow.focus();
+                        iframe.contentWindow.print();
+                    } catch (e) {
+                        console.error("Print dialog blocked or failed:", e);
+                    }
+
+                    // Reset UI
+                    generateBtn.textContent = 'Generate & Print Vouchers';
+                    generateBtn.disabled = false;
+
+                    // Cleanup
+                    setTimeout(() => {
+                        if (iframe.parentNode) document.body.removeChild(iframe);
+                        URL.revokeObjectURL(pdfUrl);
+                    }, 5000);
+                }, 1000);
+
+            } catch (err) {
+                console.error("PDF generation error:", err);
+                alert("Generation failed. Please try again.");
+                generateBtn.textContent = 'Generate & Print Vouchers';
+                generateBtn.disabled = false;
+            }
+        };
+
+        render();
+    </script>
+</body>
+
+</html>
